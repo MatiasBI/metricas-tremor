@@ -159,11 +159,11 @@ export default function ComunasHeatmap({
 
   return (
     <div className="w-full overflow-hidden rounded-[24px] border border-[#dbe5ef] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] shadow-[0_18px_36px_rgba(148,163,184,0.16)] lg:max-w-[42rem]">
-      <div className="border-b border-[#e5edf4] bg-[linear-gradient(90deg,#1d1c1a_0%,#313437_100%)] px-5 py-4">
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white/55">
+      <div className="border-b border-[#e5edf4] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] px-5 py-4">
+        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#7f93a8]">
           Cobertura territorial
         </p>
-        <h3 className="text-base font-semibold text-white sm:text-lg">
+        <h3 className="text-base font-semibold text-[#233546] sm:text-lg">
           Ingresos por comuna
         </h3>
       </div>

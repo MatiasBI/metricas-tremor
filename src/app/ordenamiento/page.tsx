@@ -24,7 +24,7 @@ export default async function OrdenamientoPage() {
       title="Ministerio de Espacio Público"
       subtitle="Subsecretaría de Mantenimiento - Dirección General de Ordenamiento"
       externalUrl="https://docs.google.com/spreadsheets/d/e/2PACX-1vTfpGKLc6MCOt07jHQ9sfl3PI9BPKtE1TdYtvThPhND9OOsyuiX7pIvhzlEGMvADg/pub?gid=165046499&single=true&output=csv"
-      externalLabel="Ver fuente"
+      externalLabel="Ver mas en Power BI"
     />
   )
 }

@@ -24,7 +24,7 @@ export default async function PaisajeUrbanoPage() {
       title="Ministerio de Espacio Público"
       subtitle="Subsecretaría de Mantenimiento - Dirección General de Paisaje Urbano"
       externalUrl="https://docs.google.com/spreadsheets/d/e/2PACX-1vRggT7omiTs6RRnJdWZfcm33wSk_UsdEB3ORObMtFcXXh6CXFgfHxra0WF-fFaFyw/pub?gid=267678007&single=true&output=csv"
-      externalLabel="Ver fuente"
+      externalLabel="Ver mas en Power BI"
     />
   )
 }

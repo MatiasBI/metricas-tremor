@@ -2,8 +2,6 @@
 
 import "./metricas.css"
 import dynamic from "next/dynamic"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import type { SelectChangeEvent } from "@mui/material"
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined"
@@ -18,7 +16,6 @@ import TopPendientesPrestacionChart from "./components/TopPendientesPrestacionCh
 import FlujoBajasChart from "./components/FlujoBajasChart"
 import formatComuna from "./components/formatComuna"
 import formatPrestacion from "./components/formatPrestacion"
-import { dashboardLinks } from "../../lib/dashboardLinks"
 
 interface MetricasData {
   resumen: {
@@ -180,7 +177,6 @@ export default function MetricasScreen({
   externalUrl = DEFAULT_EXTERNAL_URL,
   externalLabel = "Ver mas en Power BI",
 }: Props) {
-  const pathname = usePathname()
   const [dashboardData, setDashboardData] = useState<MetricasData | null>(data)
   const [selectedYears, setSelectedYears] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
@@ -408,34 +404,6 @@ export default function MetricasScreen({
   return (
     <div className="metricas-page">
       <div className="metricas-shell">
-        <aside className="metricas-sidebar">
-          <div>
-            <p className="metricas-sidebar-eyebrow">MEEP</p>
-            <h1 className="metricas-sidebar-title">Metricas</h1>
-            <p className="metricas-sidebar-copy">
-              Tableros ejecutivos integrados con una presentacion visual alineada al ecosistema MEEP.
-            </p>
-          </div>
-
-          <nav className="metricas-sidebar-nav">
-            {dashboardLinks.map(({ href, title, Icon }) => {
-              const isActive = pathname === href
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`metricas-sidebar-link ${isActive ? "is-active" : ""}`}
-                >
-                  <span className="metricas-sidebar-link-icon">
-                    <Icon fontSize="inherit" />
-                  </span>
-                  <span>{title}</span>
-                </Link>
-              )
-            })}
-          </nav>
-        </aside>
-
         <div className="metricas-content">
           <header className="metricas-topbar">
             <div className="metricas-topbar-copy">
@@ -449,42 +417,13 @@ export default function MetricasScreen({
                 <InsightsOutlinedIcon fontSize="inherit" />
               </div>
               <div>
-                <p className="metricas-summary-eyebrow">Actualizacion</p>
+                <p className="metricas-summary-eyebrow">Resumen ejecutivo</p>
                 <p className="metricas-summary-text">
                   Dashboard ejecutivo con filtros interactivos y lectura por comuna.
                 </p>
               </div>
             </div>
           </header>
-
-          <section className="metricas-hero">
-            <div className="metricas-hero-main">
-              <div className="metricas-hero-badge">Seguimiento estrategico</div>
-              <h3 className="metricas-hero-title">Lectura rapida para presentacion ejecutiva</h3>
-              <p className="metricas-hero-text">
-                Unificamos KPIs, distribucion territorial y focos operativos en una vista consistente con la experiencia de MEEP.
-              </p>
-            </div>
-
-            <div className="metricas-hero-side">
-              <div className="metricas-hero-meta">
-                <CalendarMonthOutlinedIcon fontSize="inherit" />
-                <span>Actualizado: {dashboardData.resumen.generado || "Sin fecha"}</span>
-              </div>
-              {externalUrl ? (
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.open(externalUrl, "_blank", "noopener,noreferrer")
-                  }
-                  className="metricas-hero-button"
-                >
-                  <span>{externalLabel}</span>
-                  <ArrowOutwardRoundedIcon fontSize="small" />
-                </button>
-              ) : null}
-            </div>
-          </section>
 
           <div className="metricas-body">
             {hasActiveFilter ? (
@@ -549,6 +488,25 @@ export default function MetricasScreen({
               </div>
             </div>
           </div>
+
+          <footer className="metricas-footer-actions">
+            <div className="metricas-footer-meta">
+              <CalendarMonthOutlinedIcon fontSize="inherit" />
+              <span>Actualizado: {dashboardData.resumen.generado || "Sin fecha"}</span>
+            </div>
+            {externalUrl ? (
+              <button
+                type="button"
+                onClick={() =>
+                  window.open(externalUrl, "_blank", "noopener,noreferrer")
+                }
+                className="metricas-footer-button"
+              >
+                <span>{externalLabel}</span>
+                <ArrowOutwardRoundedIcon fontSize="small" />
+              </button>
+            ) : null}
+          </footer>
         </div>
       </div>
 
