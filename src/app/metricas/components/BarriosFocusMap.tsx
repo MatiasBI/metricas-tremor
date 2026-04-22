@@ -35,6 +35,14 @@ const WIDTH = 420
 const HEIGHT = 420
 const PADDING = 22
 
+function normalizeBarrioName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+}
+
 function getFeatureBounds(features: GeoFeature[]): Bounds {
   let minX = Infinity
   let minY = Infinity
@@ -136,6 +144,13 @@ export default function BarriosFocusMap({
   )
 
   const availableBarrios = activeComuna ? getBarriosForComuna(activeComuna) : []
+  const canonicalBarrios = useMemo(
+    () =>
+      new Map(
+        availableBarrios.map((barrio) => [normalizeBarrioName(barrio), barrio])
+      ),
+    [availableBarrios]
+  )
   const selectedBarriosTotal = selectedBarrios.reduce(
     (sum, barrio) => sum + (barrioTotales[barrio] ?? 0),
     0
@@ -184,7 +199,9 @@ export default function BarriosFocusMap({
               aria-label={`Mapa ampliado de barrios de ${formatComuna(activeComuna)}`}
             >
               {activeFeatures.map((feature) => {
-                const barrio = String(feature.properties.nombre)
+                const rawBarrio = String(feature.properties.nombre)
+                const barrio =
+                  canonicalBarrios.get(normalizeBarrioName(rawBarrio)) ?? rawBarrio
                 const total = barrioTotales[barrio] ?? 0
                 const isSelected = selectedBarrios.includes(barrio)
                 const isHovered = hoveredBarrio === barrio
