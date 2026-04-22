@@ -483,6 +483,20 @@ async function persistSnapshot(
   )
 }
 
+async function persistSnapshotSafely(
+  datasetKey: MetricasDatasetKey,
+  snapshot: DatasetSnapshot
+) {
+  try {
+    await persistSnapshot(datasetKey, snapshot)
+  } catch (error) {
+    console.warn("No se pudo persistir el snapshot de metricas", {
+      datasetKey,
+      error,
+    })
+  }
+}
+
 async function readPersistedSnapshot(datasetKey: MetricasDatasetKey) {
   const datasetCachePath = getDatasetCachePath(datasetKey)
   try {
@@ -594,7 +608,7 @@ async function updateDatasetCacheFromRemote(datasetKey: MetricasDatasetKey) {
       responseCache.delete(key)
     }
   }
-  void persistSnapshot(datasetKey, snapshot)
+  void persistSnapshotSafely(datasetKey, snapshot)
 
   return snapshot
 }
@@ -610,7 +624,7 @@ async function getCachedDataset(datasetKey: MetricasDatasetKey) {
   const demoSnapshot = await readDemoSnapshot(datasetKey)
 
   if (demoSnapshot) {
-    await persistSnapshot(datasetKey, demoSnapshot)
+    void persistSnapshotSafely(datasetKey, demoSnapshot)
 
     datasetCache.set(datasetKey, {
       expiresAt: Date.now() + CACHE_TTL_MS,
