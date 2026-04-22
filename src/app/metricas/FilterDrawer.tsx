@@ -40,6 +40,7 @@ type MetricasData = {
     prestaciones: string[]
     categorias: string[]
     comunas: string[]
+    barrios: string[]
   }
 }
 
@@ -49,6 +50,7 @@ type ActiveFilterItem =
   | { key: string; label: string; type: "prestacion"; value: string }
   | { key: string; label: string; type: "categoria"; value: string }
   | { key: string; label: string; type: "comuna"; value: string }
+  | { key: string; label: string; type: "barrio"; value: string }
 
 type Props = {
   dashboardData: MetricasData
@@ -60,6 +62,7 @@ type Props = {
   selectedPrestaciones: string[]
   selectedCategorias: string[]
   selectedComunas: string[]
+  selectedBarrios: string[]
   activeFilterItems: ActiveFilterItem[]
   years: string[]
   monthsByYear: Record<string, string[]>
@@ -72,6 +75,7 @@ type Props = {
   onPrestacionesChange: (event: SelectChangeEvent<string[]>) => void
   onCategoriasChange: (event: SelectChangeEvent<string[]>) => void
   onComunasChange: (event: SelectChangeEvent<string[]>) => void
+  onBarriosChange: (event: SelectChangeEvent<string[]>) => void
 }
 
 export default function FilterDrawer({
@@ -84,6 +88,7 @@ export default function FilterDrawer({
   selectedPrestaciones,
   selectedCategorias,
   selectedComunas,
+  selectedBarrios,
   activeFilterItems,
   years,
   monthsByYear,
@@ -96,6 +101,7 @@ export default function FilterDrawer({
   onPrestacionesChange,
   onCategoriasChange,
   onComunasChange,
+  onBarriosChange,
 }: Props) {
   return (
     <Drawer
@@ -357,6 +363,38 @@ export default function FilterDrawer({
                 <MenuItem key={comuna} value={comuna}>
                   <Checkbox checked={selectedComunas.includes(comuna)} />
                   <ListItemText primary={formatComuna(comuna)} />
+                </MenuItem>
+              ))}
+            </Select>
+          </Paper>
+
+          <Paper
+            sx={{
+              p: 2,
+              borderRadius: 4,
+              background: "rgba(255,255,255,0.92)",
+              border: "1px solid #dbe5ef",
+              boxShadow: "0 14px 28px rgba(148, 163, 184, 0.12)",
+            }}
+          >
+            <label className="mb-2 block text-sm font-semibold text-slate-700">
+              Barrio
+            </label>
+            <Select
+              fullWidth
+              multiple
+              size="small"
+              displayEmpty
+              value={selectedBarrios}
+              onChange={onBarriosChange}
+              renderValue={(selected) =>
+                selected.length ? selected.join(", ") : "Todos"
+              }
+            >
+              {dashboardData.filtros.barrios.map((barrio) => (
+                <MenuItem key={barrio} value={barrio}>
+                  <Checkbox checked={selectedBarrios.includes(barrio)} />
+                  <ListItemText primary={barrio} />
                 </MenuItem>
               ))}
             </Select>

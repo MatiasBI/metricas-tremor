@@ -18,9 +18,7 @@ type Props = {
 }
 
 type GeoFeature = {
-  properties: {
-    COMUNAS: number
-  }
+  properties: Record<string, string | number>
   geometry: {
     type: "Polygon" | "MultiPolygon"
     coordinates: number[][][] | number[][][][]
@@ -138,24 +136,34 @@ export default function ComunasHeatmap({
   selectedComunas = [],
   onToggleComuna,
 }: Props) {
-  const [geojson, setGeojson] = useState<GeoJson | null>(null)
-  const [hoveredComuna, setHoveredComuna] = useState<string | null>(null)
+  const [barriosGeojson, setBarriosGeojson] = useState<GeoJson | null>(null)
+  const [comunasGeojson, setComunasGeojson] = useState<GeoJson | null>(null)
+  const [hoveredBarrio, setHoveredBarrio] = useState<{
+    barrio: string
+    comuna: string
+  } | null>(null)
 
   useEffect(() => {
+    fetch("/maps/caba-barrios.geojson")
+      .then((response) => response.json())
+      .then(setBarriosGeojson)
+
     fetch("/maps/caba-comunas.geojson")
       .then((response) => response.json())
-      .then(setGeojson)
+      .then(setComunasGeojson)
   }, [])
 
   const bounds = useMemo(
-    () => (geojson ? getFeatureBounds(geojson.features) : null),
-    [geojson]
+    () => (barriosGeojson ? getFeatureBounds(barriosGeojson.features) : null),
+    [barriosGeojson]
   )
 
   const maxValue = useMemo(
     () => Math.max(...Object.values(data).map((value) => value.total), 0),
     [data]
   )
+
+  const hoveredTotal = hoveredBarrio ? data[hoveredBarrio.comuna]?.total ?? 0 : 0
 
   return (
     <div className="w-full overflow-hidden rounded-[24px] border border-[#dbe5ef] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] shadow-[0_18px_36px_rgba(148,163,184,0.16)] lg:max-w-[42rem]">
@@ -164,49 +172,72 @@ export default function ComunasHeatmap({
           Cobertura territorial
         </p>
         <h3 className="text-base font-semibold text-[#233546] sm:text-lg">
-          Ingresos por comuna
+          Ingresos por comuna y barrio
         </h3>
       </div>
 
       <div className="px-4 pb-5 pt-4 sm:px-5">
         <div className="rounded-[22px] bg-[linear-gradient(180deg,#f9fcff_0%,#f1f8fd_100%)] px-3 py-4 sm:px-4">
-          {geojson && bounds ? (
+          {barriosGeojson && comunasGeojson && bounds ? (
             <svg
               viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
               className="mx-auto h-auto w-full max-w-[400px] sm:max-w-[420px]"
               role="img"
-              aria-label="Mapa de calor de ingresos por comuna"
+              aria-label="Mapa de calor de ingresos por comuna y barrio"
             >
-              {geojson.features.map((feature) => {
-                const comuna = `C${String(feature.properties.COMUNAS).padStart(2, "0")}`
+              {barriosGeojson.features.map((feature) => {
+                const comunaValue = feature.properties.comuna
+                const barrioValue = feature.properties.nombre
+                const comuna = `C${String(comunaValue).padStart(2, "0")}`
+                const barrio = String(barrioValue)
                 const comunaLabel = formatComuna(comuna)
                 const total = data[comuna]?.total ?? 0
                 const fill = getColor(total, maxValue)
                 const path = geometryToPath(feature, bounds)
-                const isHovered = hoveredComuna === comuna
+                const isHovered = hoveredBarrio?.barrio === barrio
                 const isSelected = selectedComunas.includes(comuna)
 
                 return (
                   <path
-                    key={comuna}
+                    key={`${comuna}-${barrio}`}
                     d={path}
                     fill={fill}
-                    stroke={isSelected ? "#007fb0" : "#8fa2b4"}
-                    strokeWidth={isHovered || isSelected ? 2.6 : 1.2}
+                    stroke={isSelected ? "#007fb0" : "#d6e5ef"}
+                    strokeWidth={isHovered ? 2 : 0.95}
                     style={{
                       cursor: onToggleComuna ? "pointer" : "default",
                       transition:
                         "fill 160ms ease, stroke-width 160ms ease, stroke 160ms ease",
-                      filter: isHovered || isSelected
+                      filter: isHovered
                         ? "drop-shadow(0 6px 10px rgba(15, 23, 42, 0.12))"
                         : "none",
                     }}
-                    onMouseEnter={() => setHoveredComuna(comuna)}
-                    onMouseLeave={() => setHoveredComuna(null)}
+                    onMouseEnter={() => setHoveredBarrio({ barrio, comuna })}
+                    onMouseLeave={() => setHoveredBarrio(null)}
                     onClick={() => onToggleComuna?.(comuna)}
                   >
-                    <title>{`${comunaLabel}: ${total.toLocaleString("es-AR")} ingresos`}</title>
+                    <title>{`${barrio} (${comunaLabel}): ${total.toLocaleString("es-AR")} ingresos`}</title>
                   </path>
+                )
+              })}
+
+              {comunasGeojson.features.map((feature) => {
+                const comuna = `C${String(feature.properties.COMUNAS).padStart(2, "0")}`
+                const path = geometryToPath(feature, bounds)
+                const isSelected = selectedComunas.includes(comuna)
+
+                return (
+                  <path
+                    key={`outline-${comuna}`}
+                    d={path}
+                    fill="none"
+                    stroke={isSelected ? "#005f86" : "#8fa2b4"}
+                    strokeWidth={isSelected ? 2.4 : 1.35}
+                    style={{
+                      pointerEvents: "none",
+                      transition: "stroke-width 160ms ease, stroke 160ms ease",
+                    }}
+                  />
                 )
               })}
             </svg>
@@ -234,9 +265,9 @@ export default function ComunasHeatmap({
         </div>
 
         <p className="mt-3 min-h-4 text-xs text-slate-600">
-          {hoveredComuna
-            ? `${formatComuna(hoveredComuna)}: ${(data[hoveredComuna]?.total ?? 0).toLocaleString("es-AR")} ingresos`
-            : "Pasa el mouse por una comuna para ver sus ingresos."}
+          {hoveredBarrio
+            ? `${hoveredBarrio.barrio} (${formatComuna(hoveredBarrio.comuna)}): ${hoveredTotal.toLocaleString("es-AR")} ingresos`
+            : "Pasa el mouse por un barrio para ver sus ingresos por comuna."}
         </p>
       </div>
     </div>

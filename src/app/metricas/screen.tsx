@@ -7,9 +7,13 @@ import type { SelectChangeEvent } from "@mui/material"
 import InsightsOutlinedIcon from "@mui/icons-material/InsightsOutlined"
 import ArrowOutwardRoundedIcon from "@mui/icons-material/ArrowOutwardRounded"
 import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined"
+import DownloadRoundedIcon from "@mui/icons-material/DownloadRounded"
 
 import KPICards from "./components/KPICards"
 import ComunasHeatmap from "./components/ComunasHeatmap"
+import BarriosFocusMap from "./components/BarriosFocusMap"
+import IngresosPorBarrioChart from "./components/IngresosPorBarrioChart"
+import IngresosPorHoraChart from "./components/IngresosPorHoraChart"
 import MotivosBajaChart from "./components/MotivosBajaChart"
 import TopIngresosPrestacionChart from "./components/TopIngresosPrestacionChart"
 import TopPendientesPrestacionChart from "./components/TopPendientesPrestacionChart"
@@ -17,6 +21,7 @@ import FlujoBajasChart from "./components/FlujoBajasChart"
 import formatComuna from "./components/formatComuna"
 import formatPrestacion from "./components/formatPrestacion"
 import DashboardSelector from "./DashboardSelector"
+import { getBarriosForComuna } from "../../lib/barrios"
 
 interface MetricasData {
   resumen: {
@@ -58,6 +63,17 @@ interface MetricasData {
     cantidad: number
     porcentaje: number
   }>
+  por_barrio: Array<{
+    barrio: string
+    cantidad: number
+    porcentaje: number
+  }>
+  por_hora: Array<{
+    hora: string
+    cantidad: number
+    porcentaje: number
+  }>
+  barrio_totales: Record<string, number>
   flujo_bajas: {
     resueltos: number
     pendientes: number
@@ -71,6 +87,7 @@ interface MetricasData {
     prestaciones: string[]
     categorias: string[]
     comunas: string[]
+    barrios: string[]
   }
 }
 
@@ -89,6 +106,7 @@ type FilterSelections = {
   prestaciones: string[]
   categorias: string[]
   comunas: string[]
+  barrios: string[]
 }
 
 type ActiveFilterItem =
@@ -97,6 +115,7 @@ type ActiveFilterItem =
   | { key: string; label: string; type: "prestacion"; value: string }
   | { key: string; label: string; type: "categoria"; value: string }
   | { key: string; label: string; type: "comuna"; value: string }
+  | { key: string; label: string; type: "barrio"; value: string }
 
 const MONTHS = [
   { value: "01", label: "Enero" },
@@ -133,6 +152,7 @@ function buildMetricasQuery({
   prestaciones,
   categorias,
   comunas,
+  barrios,
 }: FilterSelections & { apiPath: string }) {
   const params = new URLSearchParams()
 
@@ -156,6 +176,10 @@ function buildMetricasQuery({
     params.set("comuna", [...comunas].sort().join(","))
   }
 
+  if (barrios.length) {
+    params.set("barrio", [...barrios].sort().join(","))
+  }
+
   const query = params.toString()
   return query ? `${apiPath}?${query}` : apiPath
 }
@@ -166,7 +190,8 @@ function areSelectionsEqual(a: FilterSelections, b: FilterSelections) {
     a.months.join("|") === b.months.join("|") &&
     a.prestaciones.join("|") === b.prestaciones.join("|") &&
     a.categorias.join("|") === b.categorias.join("|") &&
-    a.comunas.join("|") === b.comunas.join("|")
+    a.comunas.join("|") === b.comunas.join("|") &&
+    a.barrios.join("|") === b.barrios.join("|")
   )
 }
 
@@ -179,6 +204,9 @@ export default function MetricasScreen({
   externalLabel = "Ver mas en Power BI",
 }: Props) {
   const [dashboardData, setDashboardData] = useState<MetricasData | null>(data)
+  const [barrioReferenceTotals, setBarrioReferenceTotals] = useState<
+    Record<string, number>
+  >(data?.barrio_totales ?? {})
   const [selectedYears, setSelectedYears] = useState<string[]>([])
   const [selectedMonths, setSelectedMonths] = useState<string[]>([])
   const [expandedYears, setExpandedYears] = useState<string[]>([])
@@ -187,12 +215,14 @@ export default function MetricasScreen({
   const [selectedPrestaciones, setSelectedPrestaciones] = useState<string[]>([])
   const [selectedCategorias, setSelectedCategorias] = useState<string[]>([])
   const [selectedComunas, setSelectedComunas] = useState<string[]>([])
+  const [selectedBarrios, setSelectedBarrios] = useState<string[]>([])
   const previousSelectionsRef = useRef<FilterSelections>({
     years: [],
     months: [],
     prestaciones: [],
     categorias: [],
     comunas: [],
+    barrios: [],
   })
 
   const monthsByYear = useMemo(
@@ -207,12 +237,18 @@ export default function MetricasScreen({
     [dashboardData?.filtros.years]
   )
 
+  const activeComuna = selectedComunas.at(-1) ?? null
+  const exportPath = apiPath.endsWith("/api/metricas")
+    ? `${apiPath}/export`
+    : `${apiPath}/export`
+
   const hasActiveFilter =
     selectedYears.length > 0 ||
     selectedMonths.length > 0 ||
     selectedPrestaciones.length > 0 ||
     selectedCategorias.length > 0 ||
-    selectedComunas.length > 0
+    selectedComunas.length > 0 ||
+    selectedBarrios.length > 0
 
   const activeFilterItems: ActiveFilterItem[] = [
     ...selectedYears.map((year) => ({
@@ -250,7 +286,23 @@ export default function MetricasScreen({
       type: "comuna" as const,
       value: item,
     })),
+    ...selectedBarrios.map((item) => ({
+      key: `barrio-${item}`,
+      label: item,
+      type: "barrio" as const,
+      value: item,
+    })),
   ]
+
+  const downloadUrl = buildMetricasQuery({
+    apiPath: exportPath,
+    years: selectedYears,
+    months: selectedMonths,
+    prestaciones: selectedPrestaciones,
+    categorias: selectedCategorias,
+    comunas: selectedComunas,
+    barrios: selectedBarrios,
+  })
 
   const removeActiveFilter = (item: ActiveFilterItem) => {
     if (item.type === "year") {
@@ -284,7 +336,14 @@ export default function MetricasScreen({
       return
     }
 
-    setSelectedComunas((current) =>
+    if (item.type === "comuna") {
+      setSelectedComunas((current) =>
+        current.filter((value) => value !== item.value)
+      )
+      return
+    }
+
+    setSelectedBarrios((current) =>
       current.filter((value) => value !== item.value)
     )
   }
@@ -358,6 +417,7 @@ export default function MetricasScreen({
     setSelectedPrestaciones([])
     setSelectedCategorias([])
     setSelectedComunas([])
+    setSelectedBarrios([])
   }
 
   useEffect(() => {
@@ -367,6 +427,7 @@ export default function MetricasScreen({
       prestaciones: selectedPrestaciones,
       categorias: selectedCategorias,
       comunas: selectedComunas,
+      barrios: selectedBarrios,
     }
 
     if (areSelectionsEqual(previousSelectionsRef.current, currentSelections)) {
@@ -392,7 +453,52 @@ export default function MetricasScreen({
     selectedPrestaciones,
     selectedCategorias,
     selectedComunas,
+    selectedBarrios,
   ])
+
+  useEffect(() => {
+    const url = buildMetricasQuery({
+      apiPath,
+      years: selectedYears,
+      months: selectedMonths,
+      prestaciones: selectedPrestaciones,
+      categorias: selectedCategorias,
+      comunas: selectedComunas,
+      barrios: [],
+    })
+
+    fetch(url)
+      .then((res) => res.json())
+      .then((payload: MetricasData) => {
+        setBarrioReferenceTotals(payload.barrio_totales ?? {})
+      })
+      .catch(() => {
+        // Keep the last successful totals if this auxiliary refresh fails.
+      })
+  }, [
+    apiPath,
+    selectedYears,
+    selectedMonths,
+    selectedPrestaciones,
+    selectedCategorias,
+    selectedComunas,
+  ])
+
+  useEffect(() => {
+    if (!activeComuna) {
+      if (selectedBarrios.length) {
+        setSelectedBarrios([])
+      }
+      return
+    }
+
+    const allowedBarrios = new Set(getBarriosForComuna(activeComuna))
+
+    setSelectedBarrios((current) => {
+      const next = current.filter((barrio) => allowedBarrios.has(barrio))
+      return next.length === current.length ? current : next
+    })
+  }, [activeComuna, selectedBarrios])
 
   if (!dashboardData) {
     return (
@@ -445,18 +551,42 @@ export default function MetricasScreen({
             <KPICards resumen={dashboardData.resumen} />
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-5 xl:items-stretch">
-              <div className="xl:col-span-3">
+              <div className="grid grid-cols-1 gap-4 xl:col-span-3">
                 <ComunasHeatmap
                   data={dashboardData.por_comuna}
                   selectedComunas={selectedComunas}
                   onToggleComuna={(comuna) =>
-                    setSelectedComunas((current) =>
-                      current.includes(comuna)
-                        ? current.filter((item) => item !== comuna)
-                        : [...current, comuna]
+                    setSelectedComunas((current) => {
+                      const isSameComuna =
+                        current.length === 1 && current[0] === comuna
+
+                      if (isSameComuna) {
+                        setSelectedBarrios([])
+                        return []
+                      }
+
+                      setSelectedBarrios([])
+                      return [comuna]
+                    })
+                  }
+                />
+
+                <BarriosFocusMap
+                  activeComuna={activeComuna}
+                  barrioTotales={barrioReferenceTotals}
+                  selectedBarrios={selectedBarrios}
+                  onToggleBarrio={(barrio) =>
+                    setSelectedBarrios((current) =>
+                      current.includes(barrio)
+                        ? current.filter((item) => item !== barrio)
+                        : [...current, barrio]
                     )
                   }
                 />
+
+                <div className="metricas-surface-card">
+                  <IngresosPorBarrioChart items={dashboardData.por_barrio} />
+                </div>
               </div>
 
               <div className="metricas-surface-card xl:col-span-2">
@@ -480,6 +610,10 @@ export default function MetricasScreen({
                 </div>
 
                 <div className="metricas-surface-card">
+                  <IngresosPorHoraChart items={dashboardData.por_hora} />
+                </div>
+
+                <div className="metricas-surface-card">
                   <TopPendientesPrestacionChart
                     items={dashboardData.top_pendientes_prestacion}
                   />
@@ -497,18 +631,27 @@ export default function MetricasScreen({
               <CalendarMonthOutlinedIcon fontSize="inherit" />
               <span>Actualizado: {dashboardData.resumen.generado || "Sin fecha"}</span>
             </div>
-            {externalUrl ? (
-              <button
-                type="button"
-                onClick={() =>
-                  window.open(externalUrl, "_blank", "noopener,noreferrer")
-                }
-                className="metricas-footer-button"
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              <a
+                href={downloadUrl}
+                className="metricas-footer-button metricas-footer-button-secondary"
               >
-                <span>{externalLabel}</span>
-                <ArrowOutwardRoundedIcon fontSize="small" />
-              </button>
-            ) : null}
+                <span>Descargar con filtros actuales</span>
+                <DownloadRoundedIcon fontSize="small" />
+              </a>
+              {externalUrl ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.open(externalUrl, "_blank", "noopener,noreferrer")
+                  }
+                  className="metricas-footer-button"
+                >
+                  <span>{externalLabel}</span>
+                  <ArrowOutwardRoundedIcon fontSize="small" />
+                </button>
+              ) : null}
+            </div>
           </footer>
         </div>
       </div>
@@ -533,6 +676,7 @@ export default function MetricasScreen({
           selectedPrestaciones={selectedPrestaciones}
           selectedCategorias={selectedCategorias}
           selectedComunas={selectedComunas}
+          selectedBarrios={selectedBarrios}
           activeFilterItems={activeFilterItems}
           years={dashboardData.filtros.years}
           monthsByYear={monthsByYear}
@@ -550,6 +694,9 @@ export default function MetricasScreen({
           }
           onComunasChange={(event) =>
             handleMultiSelectChange(event, setSelectedComunas)
+          }
+          onBarriosChange={(event) =>
+            handleMultiSelectChange(event, setSelectedBarrios)
           }
         />
       ) : null}

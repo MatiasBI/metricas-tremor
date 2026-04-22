@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
         ?.split(",")
         .filter(Boolean),
       comuna: req.nextUrl.searchParams.get("comuna")?.split(",").filter(Boolean),
+      barrio: req.nextUrl.searchParams.get("barrio")?.split(",").filter(Boolean),
     })
 
     return NextResponse.json(payload)

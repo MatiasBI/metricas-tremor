@@ -40,14 +40,15 @@ async function waitForCacheSnapshot(cachePath: string) {
 }
 
 async function ensureDemoSnapshot(datasetKey: MetricasDatasetKey) {
-  await getMetricasData(datasetKey)
-
   const cachePath = path.join(
     process.cwd(),
     ".next",
     "cache",
     CACHE_FILE_NAMES[datasetKey]
   )
+
+  await fs.rm(cachePath, { force: true })
+  await getMetricasData(datasetKey)
   const demoDir = path.join(process.cwd(), "src", "data", "metricas-demo")
   const demoPath = path.join(demoDir, DEMO_FILE_NAMES[datasetKey])
 

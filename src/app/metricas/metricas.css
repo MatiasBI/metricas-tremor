@@ -133,12 +133,25 @@
     transform 160ms ease,
     box-shadow 160ms ease,
     background-color 160ms ease;
+  text-decoration: none;
 }
 
 .metricas-footer-button:hover {
   transform: translateY(-1px);
   background: #00a7da;
   box-shadow: 0 18px 28px rgba(0, 185, 241, 0.24);
+}
+
+.metricas-footer-button-secondary {
+  background: #ffffff;
+  color: #1775a2;
+  border: 1px solid #bfe4fb;
+  box-shadow: 0 12px 22px rgba(72, 182, 244, 0.14);
+}
+
+.metricas-footer-button-secondary:hover {
+  background: #f2fbff;
+  box-shadow: 0 16px 28px rgba(72, 182, 244, 0.18);
 }
 
 .metricas-body {
