@@ -39,6 +39,7 @@ function normalizeBarrioName(value: string) {
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/^(la|las|el|los)\s+/i, "")
     .trim()
     .toLowerCase()
 }
@@ -151,6 +152,19 @@ export default function BarriosFocusMap({
       ),
     [availableBarrios]
   )
+  const barrioLabels = useMemo(() => {
+    const labels = new Map<string, string>()
+
+    for (const feature of activeFeatures) {
+      const rawBarrio = String(feature.properties.nombre)
+      const canonicalBarrio =
+        canonicalBarrios.get(normalizeBarrioName(rawBarrio)) ?? rawBarrio
+
+      labels.set(canonicalBarrio, rawBarrio)
+    }
+
+    return labels
+  }, [activeFeatures, canonicalBarrios])
   const selectedBarriosTotal = selectedBarrios.reduce(
     (sum, barrio) => sum + (barrioTotales[barrio] ?? 0),
     0
@@ -202,6 +216,7 @@ export default function BarriosFocusMap({
                 const rawBarrio = String(feature.properties.nombre)
                 const barrio =
                   canonicalBarrios.get(normalizeBarrioName(rawBarrio)) ?? rawBarrio
+                const barrioLabel = barrioLabels.get(barrio) ?? rawBarrio
                 const total = barrioTotales[barrio] ?? 0
                 const isSelected = selectedBarrios.includes(barrio)
                 const isHovered = hoveredBarrio === barrio
@@ -225,7 +240,7 @@ export default function BarriosFocusMap({
                     onMouseLeave={() => setHoveredBarrio(null)}
                     onClick={() => onToggleBarrio(barrio)}
                   >
-                    <title>{`${barrio}: ${total.toLocaleString("es-AR")} ingresos${isSelected ? " (seleccionado)" : ""}`}</title>
+                    <title>{`${barrioLabel}: ${total.toLocaleString("es-AR")} ingresos${isSelected ? " (seleccionado)" : ""}`}</title>
                   </path>
                 )
               })}
@@ -234,6 +249,7 @@ export default function BarriosFocusMap({
 
           <div className="mt-4 flex flex-wrap gap-2">
             {availableBarrios.map((barrio) => {
+              const barrioLabel = barrioLabels.get(barrio) ?? barrio
               const total = barrioTotales[barrio] ?? 0
               const isSelected = selectedBarrios.includes(barrio)
 
@@ -248,7 +264,7 @@ export default function BarriosFocusMap({
                       : "border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50"
                   }`}
                 >
-                  {barrio} · {total.toLocaleString("es-AR")}
+                  {barrioLabel} · {total.toLocaleString("es-AR")}
                 </button>
               )
             })}
@@ -256,7 +272,7 @@ export default function BarriosFocusMap({
 
           <p className="mt-3 min-h-4 text-xs text-slate-600">
             {hoveredBarrio
-              ? `${hoveredBarrio} en ${formatComuna(activeComuna)}: ${(barrioTotales[hoveredBarrio] ?? 0).toLocaleString("es-AR")} ingresos`
+              ? `${barrioLabels.get(hoveredBarrio) ?? hoveredBarrio} en ${formatComuna(activeComuna)}: ${(barrioTotales[hoveredBarrio] ?? 0).toLocaleString("es-AR")} ingresos`
               : "Pasa el mouse por un barrio o usa las chips para ajustar el filtro."}
           </p>
         </>
