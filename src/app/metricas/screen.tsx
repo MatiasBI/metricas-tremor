@@ -16,6 +16,7 @@ import TopPendientesPrestacionChart from "./components/TopPendientesPrestacionCh
 import FlujoBajasChart from "./components/FlujoBajasChart"
 import formatComuna from "./components/formatComuna"
 import formatPrestacion from "./components/formatPrestacion"
+import DashboardSelector from "./DashboardSelector"
 
 interface MetricasData {
   resumen: {
@@ -426,6 +427,8 @@ export default function MetricasScreen({
           </header>
 
           <div className="metricas-body">
+            <DashboardSelector compact />
+
             {hasActiveFilter ? (
               <div className="metricas-filter-strip">
                 <div className="metricas-filter-strip-label">Filtros activos</div>

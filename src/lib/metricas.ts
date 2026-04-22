@@ -116,12 +116,14 @@ export type MetricasDatasetKey =
 type DatasetConfig = {
   csvUrl: string
   cacheFileName: string
+  demoFileName: string
   areaFilter?: string
   prestacionesFiltro?: string[]
 }
 
 const CACHE_TTL_MS = 15 * 60 * 1000
-const FETCH_TIMEOUT_MS = 45000
+const FETCH_TIMEOUT_MS = 120000
+const DEMO_SNAPSHOT_DIR = path.join(process.cwd(), "src", "data", "metricas-demo")
 const PRESTACIONES_FILTRO = [
   "COLUMNA DE ALUMBRADO: TAPA FALT Y/O DETE",
   "LUMINARIA: APAGADA",
@@ -138,6 +140,7 @@ const DATASET_CONFIGS: Record<MetricasDatasetKey, DatasetConfig> = {
     csvUrl:
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAFSmOBLHn9wBeMebBvJpcZbwc7ajY0tlh9B4Cmjqud3rMUebB9LsRGsQbkYxC7w/pub?gid=1574405517&single=true&output=csv",
     cacheFileName: "metricas-alumbrado-dataset.json",
+    demoFileName: "alumbrado-dataset.json",
     areaFilter: "Alumbrado",
     prestacionesFiltro: PRESTACIONES_FILTRO,
   },
@@ -145,11 +148,13 @@ const DATASET_CONFIGS: Record<MetricasDatasetKey, DatasetConfig> = {
     csvUrl:
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vTfpGKLc6MCOt07jHQ9sfl3PI9BPKtE1TdYtvThPhND9OOsyuiX7pIvhzlEGMvADg/pub?gid=165046499&single=true&output=csv",
     cacheFileName: "metricas-ordenamiento-dataset.json",
+    demoFileName: "ordenamiento-dataset.json",
   },
   "paisaje-urbano": {
     csvUrl:
       "https://docs.google.com/spreadsheets/d/e/2PACX-1vRggT7omiTs6RRnJdWZfcm33wSk_UsdEB3ORObMtFcXXh6CXFgfHxra0WF-fFaFyw/pub?gid=267678007&single=true&output=csv",
     cacheFileName: "metricas-paisaje-urbano-dataset.json",
+    demoFileName: "paisaje-urbano-dataset.json",
   },
 }
 
@@ -222,6 +227,10 @@ function getDatasetCachePath(datasetKey: MetricasDatasetKey) {
     "cache",
     DATASET_CONFIGS[datasetKey].cacheFileName
   )
+}
+
+function getDemoSnapshotPath(datasetKey: MetricasDatasetKey) {
+  return path.join(DEMO_SNAPSHOT_DIR, DATASET_CONFIGS[datasetKey].demoFileName)
 }
 
 function buildSnapshot(
@@ -329,6 +338,16 @@ async function readPersistedSnapshot(datasetKey: MetricasDatasetKey) {
   }
 }
 
+async function readDemoSnapshot(datasetKey: MetricasDatasetKey) {
+  const demoSnapshotPath = getDemoSnapshotPath(datasetKey)
+  try {
+    const raw = await fs.readFile(demoSnapshotPath, "utf8")
+    return deserializeSnapshot(JSON.parse(raw) as PersistedDatasetSnapshot)
+  } catch {
+    return null
+  }
+}
+
 export function crearResumenVacio(
   filtros: MetricasPayload["filtros"] = {
     years: [],
@@ -427,6 +446,17 @@ async function getCachedDataset(datasetKey: MetricasDatasetKey) {
 
   if (cachedDataset && cachedDataset.expiresAt > now) {
     return cachedDataset.snapshot
+  }
+
+  const demoSnapshot = await readDemoSnapshot(datasetKey)
+
+  if (demoSnapshot) {
+    datasetCache.set(datasetKey, {
+      expiresAt: Date.now() + CACHE_TTL_MS,
+      snapshot: demoSnapshot,
+    })
+
+    return demoSnapshot
   }
 
   const persistedSnapshot = await readPersistedSnapshot(datasetKey)

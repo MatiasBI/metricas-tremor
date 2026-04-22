@@ -13,15 +13,15 @@ export type DashboardLink = {
 
 export const dashboardLinks: DashboardLink[] = [
   {
-    href: "/mantenimiento",
-    title: "Mantenimiento",
+    href: "/metricas/alumbrado",
+    title: "Alumbrado",
     subtitle: "Alumbrado y mantenimiento operativo",
     description:
       "Indicadores principales, distribucion por comunas, pendientes y motivos de baja.",
     Icon: LightbulbOutlinedIcon,
   },
   {
-    href: "/ordenamiento",
+    href: "/metricas/ordenamiento",
     title: "Ordenamiento",
     subtitle: "Direccion General de Ordenamiento",
     description:
@@ -29,7 +29,7 @@ export const dashboardLinks: DashboardLink[] = [
     Icon: RuleFolderOutlinedIcon,
   },
   {
-    href: "/paisaje-urbano",
+    href: "/metricas/paisaje-urbano",
     title: "Paisaje Urbano",
     subtitle: "Direccion General de Paisaje Urbano",
     description:

@@ -11,7 +11,8 @@
     "git-fetch-p": "git fetch -p",
     "git-branch-vv": "git branch -vv",
     "git-branch-d": "git branch -d",
-    "process-metricas": "tsx scripts/process-metricas.ts"
+    "process-metricas": "tsx scripts/process-metricas.ts",
+    "generate-demo-snapshots": "npx tsx scripts/generate-demo-snapshots.ts"
   },
   "dependencies": {
     "@emotion/cache": "^11.13.1",
